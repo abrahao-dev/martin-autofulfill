@@ -1,8 +1,15 @@
-import requests
-import json
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
+import json
+import sys
+import requests
 from datetime import datetime
 from dotenv import load_dotenv
+
+# Importar módulo de utilidades para validação de pedidos
+import utils
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -67,7 +74,9 @@ def processar_pedido(pedido):
             'nome': pedido['shipping_address']['name'] if 'shipping_address' in pedido else pedido['customer']['first_name'] + ' ' + pedido['customer']['last_name'],
             'telefone': pedido['shipping_address'].get('phone', 'Não informado') if 'shipping_address' in pedido else pedido['customer'].get('phone', 'Não informado'),
             'produto': '', # Será preenchido com o primeiro item
-            'endereco': {}
+            'endereco': {},
+            'line_items': pedido.get('line_items', []),  # Preservar line_items para fulfillment
+            'location_id': utils.DEFAULT_LOCATION_ID   # Usar location_id padrão
         }
         
         # Extrair o primeiro produto (assumindo que o primeiro é o principal)
@@ -108,6 +117,15 @@ def processar_pedido(pedido):
         # Adicionar a data de criação ao pedido processado
         if 'created_at' in pedido:
             processed_order['data_criacao'] = pedido['created_at']
+            
+        # Validar pedido
+        valido, mensagem = utils.validar_pedido(processed_order)
+        if not valido:
+            print(f"Aviso: Pedido {processed_order.get('id', 'desconhecido')} inválido: {mensagem}")
+            print("Tentando padronizar o pedido...")
+        
+        # Padronizar o pedido para garantir consistência
+        processed_order = utils.padronizar_pedido(processed_order)
         
         return processed_order
     
@@ -147,20 +165,34 @@ def main(apenas_retornar=False):
         print(f" Resultado final: {len(pedidos_processados)} pedidos pendentes")
         print("-" * 50)
     
-    # Se a flag apenas_retornar estiver ativa, retornar JSON diretamente para stdout
+    # Se a flag apenas_retornar estiver ativa, retornar os pedidos processados
     if apenas_retornar:
         # Ordenar pedidos pelo mais antigo primeiro
         pedidos_processados.sort(key=lambda x: x.get('data_criacao', ''), reverse=False)
-        # Enviar para stdout como JSON
-        print(json.dumps(pedidos_processados, ensure_ascii=False))
-        return
+        # Retornar a lista de pedidos
+        return pedidos_processados
     
     # Caso contrário, retornar os pedidos processados
     return pedidos_processados
 
-# Executar se for o script principal
+# Executar diretamente
 if __name__ == "__main__":
     import sys
     # Verificar se o argumento --apenas-retornar foi passado
     apenas_retornar = '--apenas-retornar' in sys.argv
-    main(apenas_retornar)
+    try:
+        # Se estamos apenas retornando JSON, não exibir mensagens extras
+        if apenas_retornar:
+            # Retornar pedidos como JSON diretamente para stdout
+            pedidos = main(apenas_retornar=True)
+            if pedidos:
+                print(json.dumps(pedidos, ensure_ascii=False))
+            else:
+                print("[]")
+            sys.exit(0)
+        else:
+            # Execução normal com saída para o console
+            main(apenas_retornar=False)
+    except Exception as e:
+        print(f"Erro: {str(e)}", file=sys.stderr)
+        sys.exit(1)
