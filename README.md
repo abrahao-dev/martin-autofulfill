@@ -1,10 +1,10 @@
 # Martin Autofulfill
 
-Automatização da rotina de pedidos pagos na Shopify para compras automatizadas na Shopee, com interface simples para selecionar os pedidos a serem processados e preenchimento automático dos dados do cliente na Shopee.
+Automatização da rotina de pedidos na Shopify para compras automatizadas na Shopee, com interface simples para selecionar os pedidos a serem processados e preenchimento automático dos dados do cliente na Shopee.
 
 ## Funcionalidades
 
-- ✅ **Integração com Shopify**: Busca pedidos pagos e não processados da API Shopify
+- ✅ **Integração com Shopify**: Busca pedidos não processados da API Shopify
 - ✅ **Interface de gerenciamento**: Abas para pedidos pendentes, processados e ignorados
 - ✅ **Formatação de endereço Shopee**: Botão para copiar dados no formato exigido pela Shopee
 - ✅ **Sistema de logs**: Registro de operações em CSV e arquivo de log

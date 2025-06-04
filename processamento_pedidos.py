@@ -54,11 +54,42 @@ def processar_pedido_completo(pedido, codigo_rastreamento="", transportadora="",
         mensagem_fulfillment = ""
         
         if notificar_cliente and 'line_items' in pedido_processado and len(pedido_processado['line_items']) > 0:
-            sucesso_fulfillment, mensagem_fulfillment = shopify_fulfillment.criar_fulfillment(
-                pedido_processado,
-                codigo_rastreamento=codigo_rastreamento,
-                transportadora=transportadora
-            )
+            # Extrair order_id e line_item_id do pedido
+            order_id = str(pedido_processado['id'])
+            
+            # Pegar o ID do primeiro item do pedido
+            line_item_id = None
+            if pedido_processado['line_items'] and len(pedido_processado['line_items']) > 0:
+                if isinstance(pedido_processado['line_items'][0], dict) and 'id' in pedido_processado['line_items'][0]:
+                    line_item_id = str(pedido_processado['line_items'][0]['id'])
+            
+            # Verificar se temos o line_item_id necessário
+            if not line_item_id:
+                return False, "Não foi possível processar o pedido: line_item_id não encontrado"
+            
+            # Chamar a função corretamente com todos os parâmetros necessários
+            sucesso_fulfillment = False
+            try:
+                # A função agora retorna uma tupla (sucesso, resultado)
+                sucesso_fulfillment, resultado = shopify_fulfillment.criar_fulfillment(
+                    order_id=order_id,
+                    line_item_id=line_item_id,
+                    codigo_rastreamento=codigo_rastreamento,
+                    transportadora=transportadora,
+                    notificar_cliente=notificar_cliente
+                )
+                
+                if sucesso_fulfillment:
+                    mensagem_fulfillment = "Fulfillment criado com sucesso"
+                else:
+                    # Se não teve sucesso, o resultado pode conter detalhes do erro
+                    erro_detalhes = resultado
+                    if isinstance(erro_detalhes, dict) and 'errors' in erro_detalhes:
+                        mensagem_fulfillment = f"Falha ao criar fulfillment: {erro_detalhes['errors']}"
+                    else:
+                        mensagem_fulfillment = f"Falha ao criar fulfillment: {str(erro_detalhes)}"
+            except Exception as e:
+                mensagem_fulfillment = f"Erro ao criar fulfillment: {str(e)}"
             
             # Adicionar status de fulfillment
             pedido_processado['fulfillment_status'] = 'concluido' if sucesso_fulfillment else 'erro'
@@ -71,10 +102,18 @@ def processar_pedido_completo(pedido, codigo_rastreamento="", transportadora="",
             pedido_processado=pedido_processado
         )
         
-        return True, "Pedido processado com sucesso" + \
-              (". Fulfillment criado na Shopify." if sucesso_fulfillment else 
-               ". Fulfillment não criado ou com falha.")
-                
+        # Montar mensagem detalhada
+        msg_status = "Pedido processado com sucesso"
+        
+        if notificar_cliente:
+            if sucesso_fulfillment:
+                msg_fulfilment = ". Fulfillment criado na Shopify."
+            else:
+                msg_fulfilment = f". Fulfillment não criado ou com falha: {mensagem_fulfillment}"
+        else:
+            msg_fulfilment = ". (Fulfillment não solicitado)"
+            
+        return True, msg_status + msg_fulfilment 
     except Exception as e:
         return False, f"Erro ao processar pedido: {str(e)}"
 
@@ -159,3 +198,65 @@ def gerenciar_persistencia_pedidos(pedido_id, pedidos_atuais, pedido_processado=
         utils.salvar_pedidos(pedidos_ignorados, "data/pedidos_ignorados.json")
     
     return pedidos_pendentes
+
+
+def mover_para_pendentes(pedido_id):
+    """
+    Move um pedido processado (especialmente com erro de fulfillment) 
+    de volta para a lista de pendentes.
+    
+    Args:
+        pedido_id (str): ID do pedido a ser movido
+        
+    Returns:
+        bool: True se o pedido foi movido com sucesso, False caso contrário
+    """
+    try:
+        # 1. Carregar os pedidos processados e pendentes
+        processados = utils.carregar_pedidos("data/pedidos_processados.json")
+        pendentes = utils.carregar_pedidos("data/pedidos_pendentes.json")
+
+        # 2. Encontrar e remover o pedido com erro
+        pedido = None
+        for p in processados:
+            if str(p.get('id')) == str(pedido_id):
+                pedido = p
+                break
+                
+        if not pedido:
+            return False
+            
+        # 3. Remover o pedido da lista de processados
+        processados = [p for p in processados if str(p.get('id')) != str(pedido_id)]
+        
+        # 4. Modificar o status e remover flags de erro
+        pedido['status'] = 'pendente'
+        if 'erro_fulfillment' in pedido:
+            pedido['erro_fulfillment'] = False
+        if 'fulfillment_status' in pedido:
+            pedido['fulfillment_status'] = None
+        
+        # Remover dados de processamento se existirem
+        pedido.pop('data_processado', None)
+
+        # 5. Adicionar novamente aos pendentes
+        pendentes.append(pedido)
+
+        # 6. Salvar os arquivos atualizados
+        utils.salvar_pedidos(processados, "data/pedidos_processados.json")
+        utils.salvar_pedidos(pendentes, "data/pedidos_pendentes.json")
+        
+        # 7. Registrar no log
+        logger.registrar_operacao(
+            pedido_id=pedido_id,
+            pedido_numero=pedido.get('order_number', 'Desconhecido'),
+            cliente=pedido.get('nome', 'Cliente'),
+            operacao="mover_para_pendentes",
+            resultado="sucesso",
+            detalhes="Pedido com erro de fulfillment movido de volta para pendentes"
+        )
+
+        return True
+    except Exception as e:
+        print(f"Erro ao mover pedido para pendentes: {str(e)}")
+        return False
