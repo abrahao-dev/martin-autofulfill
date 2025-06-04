@@ -4,13 +4,21 @@ Automatização da rotina de pedidos na Shopify para compras automatizadas na Sh
 
 ## Funcionalidades
 
-- ✅ **Integração com Shopify**: Busca pedidos não processados da API Shopify
-- ✅ **Interface de gerenciamento**: Abas para pedidos pendentes, processados e ignorados
-- ✅ **Formatação de endereço Shopee**: Botão para copiar dados no formato exigido pela Shopee
-- ✅ **Sistema de logs**: Registro de operações em CSV e arquivo de log
-- ✅ **Mapeamento de produtos**: Associação entre produtos Shopify e URLs da Shopee
-- ✅ **Processo de fulfilment**: Atualização de pedidos com códigos de rastreio
-- 🔄 **Automação de compra na Shopee**: Em desenvolvimento
+### Implementadas ✅
+
+- **Integração com Shopify**: Busca pedidos não processados da API Shopify
+- **Interface de gerenciamento**: Abas para pedidos pendentes, processados e ignorados 
+- **Formatação de endereço Shopee**: Botão compatível com macOS para copiar dados formatados
+- **Sistema de logs**: Registro de operações em CSV e arquivo de log
+- **Mapeamento de produtos**: Associação entre produtos Shopify e URLs da Shopee
+- **Processo de fulfilment**: Atualização de pedidos com códigos de rastreio
+- **Status de compra**: Seletor "Já comprado/Não comprado" com persistência de dados
+- **Exibição de CPF**: Extração e display de CPF de clientes da Shopify/Yampi
+- **Modo escuro**: Interface completamente compatível com tema claro e escuro
+
+### Em desenvolvimento 🔄
+
+- **Automação de compra na Shopee**: Integração com Playwright para preencher automaticamente formulários
 
 ## Stack utilizada
 
@@ -67,4 +75,37 @@ martin-autofulfill/
 3. Sistema de logs e traceabilidade ✅
 4. Mapeamento de produtos Shopify-Shopee ✅
 5. Formatação e cópia de endereços para Shopee ✅
-6. Automação de Compra na Shopee 🔄
+6. Extração e exibição de CPF dos clientes ✅
+7. Status de compra (Já comprado/Não comprado) ✅
+8. Compatibilidade com tema claro/escuro ✅
+9. Automação de Compra na Shopee 🔄
+
+## Próximos Passos
+
+### Automação na Shopee
+
+O principal desafio restante é a automação completa das compras na plataforma Shopee. Para isso, será implementado:
+
+1. **Integração com Playwright**: Para automatizar o preenchimento de dados do cliente na Shopee
+   - Abertura automática da URL do produto
+   - Preenchimento dos campos de endereço do destinatário
+   - Seleção de variações do produto (tamanho, cor, etc.)
+   - Avanço até a etapa de pagamento
+
+2. **Fluxo de Automação**:
+   - Botão na interface para iniciar a automação
+   - Seleção do navegador e configuração do Playwright
+   - Sistema de retry e tratamento de erros
+   - Opção para modo headless ou com interface gráfica
+
+3. **Contorno de Desafios**:
+   - Identificação e bypass de captchas
+   - Tratamento de login na Shopee
+   - Adaptação a mudanças na interface da Shopee
+
+### Melhorias Futuras
+
+- **Dashboards analíticos**: Visualização de métricas de pedidos e processamento
+- **Automação de pagamentos**: Integração com métodos de pagamento na Shopee
+- **Multi-conta Shopee**: Suporte para várias contas de comprador
+- **Integração com outros marketplaces**: Expandir para além da Shopee
