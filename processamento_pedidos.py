@@ -14,7 +14,7 @@ import utils
 import shopify_fulfillment
 import logger
 
-def processar_pedido_completo(pedido, codigo_rastreamento="", transportadora="", notificar_cliente=True):
+def processar_pedido_completo(pedido, codigo_rastreamento="", transportadora="", notificar_cliente=True, palavra_chave_enviada=False, palavra_chave=""):
     """
     Função central para processamento de um pedido.
     
@@ -23,6 +23,8 @@ def processar_pedido_completo(pedido, codigo_rastreamento="", transportadora="",
         codigo_rastreamento (str): Código de rastreamento do pedido
         transportadora (str): Nome da transportadora
         notificar_cliente (bool): Se deve notificar o cliente via Shopify
+        palavra_chave_enviada (bool): Se uma palavra-chave foi enviada ao cliente
+        palavra_chave (str): A palavra-chave enviada ao cliente
         
     Returns:
         tuple: (sucesso, mensagem) onde sucesso é um booleano e mensagem é texto informativo
@@ -48,6 +50,11 @@ def processar_pedido_completo(pedido, codigo_rastreamento="", transportadora="",
         pedido_processado['data_processado'] = datetime.now().isoformat()
         pedido_processado['codigo_rastreamento'] = codigo_rastreamento
         pedido_processado['transportadora'] = transportadora
+        
+        # Adicionar informações da palavra-chave
+        pedido_processado['palavra_chave_enviada'] = palavra_chave_enviada
+        if palavra_chave_enviada:
+            pedido_processado['palavra_chave'] = palavra_chave
         
         # Criar o fulfillment na Shopify se solicitado
         sucesso_fulfillment = False

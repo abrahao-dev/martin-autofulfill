@@ -35,7 +35,7 @@ def buscar_pedidos_shopify():
 
     # Parâmetros para filtrar pedidos não processados a partir de 01/06/2025
     from datetime import datetime
-    data_inicio = '2025-06-01T00:00:00Z'  # Formato ISO 8601
+    data_inicio = '2025-05-01T00:00:00Z'  # Formato ISO 8601
 
     params = {
         'financial_status': 'paid',

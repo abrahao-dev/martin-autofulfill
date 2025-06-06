@@ -140,11 +140,40 @@ css = '''
 
     /* Cartões de pedidos - adaptação para modo escuro/claro */
     .pedido-card {
-        background-color: rgba(128, 128, 128, 0.1);
+        background-color: rgba(128, 128, 128, 0.1); 
+        border: 1px solid rgba(128, 128, 128, 0.3); 
+        border-left: 4px solid #1e88e5; 
         border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-left: 4px solid #1e88e5;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease-in-out;
+    }
+    
+    /* Efeito hover nos cards */
+    .pedido-card:hover {
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(128, 128, 128, 0.4);
+        transform: translateY(-1px);
+    }
+    
+    /* Seções internas dos cards */
+    .section-container {
+        padding: 12px;
+        margin-bottom: 12px;
+        background-color: rgba(128, 128, 128, 0.05);
+        border-radius: 6px;
+        border: 1px solid rgba(128, 128, 128, 0.15);
+    }
+    
+    /* Estilos para títulos de seção */
+    .section-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 10px;
+        color: #1e88e5;
+        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+        padding-bottom: 5px;
     }
     .pedido-numero {font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem; color: #1e88e5;}
     .pedido-cliente {font-size: 1rem; font-weight: 500; margin-bottom: 0.2rem;}
@@ -581,7 +610,7 @@ pedidos_ignorados = carregar_pedidos_ignorados()
 pedidos_processados = carregar_pedidos_processados()
 
 # Função para processar um pedido
-def processar_pedido(pedido_id, codigo_rastreamento, transportadora, pedidos_atuais, criar_fulfillment=True):
+def processar_pedido(pedido_id, codigo_rastreamento, transportadora, pedidos_atuais, criar_fulfillment=True, palavra_chave_enviada=False, palavra_chave=""):
     """Processa um pedido, adicionando código de rastreamento e transportadora"""
     # Encontrar o pedido na lista
     pedido = None
@@ -596,12 +625,14 @@ def processar_pedido(pedido_id, codigo_rastreamento, transportadora, pedidos_atu
     # Limpar o nome da transportadora (remover a URL)
     nome_transportadora = transportadora.split(' - ')[0] if ' - ' in transportadora else transportadora
 
-    # Processar o pedido usando a função completa
-    sucesso, mensagem = processar_pedido_completo(
+    # Chamar função central de processamento
+    sucesso, mensagem = processamento_pedidos.processar_pedido_completo(
         pedido,
         codigo_rastreamento=codigo_rastreamento,
-        transportadora=nome_transportadora,
-        notificar_cliente=criar_fulfillment
+        transportadora=transportadora,
+        notificar_cliente=criar_fulfillment,
+        palavra_chave_enviada=palavra_chave_enviada,
+        palavra_chave=palavra_chave
     )
 
     # Registrar a operação no log
@@ -733,13 +764,30 @@ with tab_pendentes:
                         if codigo_rastreamento:
                             # Exibir spinner durante o processamento
                             with st.spinner("Processando pedido e atualizando Shopify..."):
+                                # Buscar o pedido atual para obter os dados da palavra-chave
+                                pedido_para_processar = None
+                                for p in st.session_state.pedidos:
+                                    if str(p['id']) == str(st.session_state.processando_pedido_id):
+                                        pedido_para_processar = p
+                                        break
+                                        
+                                # Valores padrão caso não encontre o pedido
+                                palavra_chave_enviada_valor = False
+                                palavra_chave_valor = ""
+                                
+                                if pedido_para_processar:
+                                    palavra_chave_enviada_valor = pedido_para_processar.get('palavra_chave_enviada', False)
+                                    palavra_chave_valor = pedido_para_processar.get('palavra_chave', "")
+                                        
                                 # Processar o pedido
                                 sucesso, mensagem = processar_pedido(
                                     st.session_state.processando_pedido_id,
                                     codigo_rastreamento,
                                     transportadora,
                                     st.session_state.pedidos,
-                                    criar_fulfillment=criar_fulfillment
+                                    criar_fulfillment=criar_fulfillment,
+                                    palavra_chave_enviada=palavra_chave_enviada_valor,
+                                    palavra_chave=palavra_chave_valor
                                 )
 
                                 if sucesso:
@@ -821,12 +869,19 @@ with tab_pendentes:
                                 args=(pedido['id'],),
                                 use_container_width=True)
 
-                # Status de compra - adicionar botão seletor Comprado/Não comprado
-                st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
-                col_status = st.columns([3, 3])
-                with col_status[0]:
+                # Adicionar espaço e separador para melhor organização visual
+                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                
+                # Dividir o card em duas colunas principais
+                col_info, col_keyword = st.columns([1, 1])
+                
+                # COLUNA ESQUERDA - Informações do pedido e cliente
+                with col_info:
+                    # Container para status de compra
+                    st.markdown("<div class='section-container'>", unsafe_allow_html=True)
+                    st.markdown("<div class='section-title'>Status do Pedido</div>", unsafe_allow_html=True)
                     comprado = st.radio(
-                        "Status de compra",
+                        "",  # Removi o label pois já temos o título acima
                         ["Já comprado", "Não comprado"],
                         index=0 if pedido.get("ja_comprado", False) else 1,
                         key=f"ja_comprado_{pedido['id']}",
@@ -834,17 +889,95 @@ with tab_pendentes:
                     )
                     # Atualizar o campo no pedido e salvar a alteração
                     novo_status = (comprado == "Já comprado")
-
-                    # Só salva se houve mudança
                     if pedido.get("ja_comprado", False) != novo_status:
                         pedido["ja_comprado"] = novo_status
-                        # Salvar a alteração no arquivo JSON
                         utils.salvar_pedidos(st.session_state.pedidos, 'data/pedidos_pendentes.json')
-
-                # MELHORIA 3: Informações do cliente com tipografia melhorada
-                st.markdown(f"<div class='pedido-cliente'>{pedido['nome']} - CPF: {pedido.get('cpf', 'Não informado')}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='pedido-info'>☎ {pedido['telefone']}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='pedido-produto'>📦 {pedido['produto']}</div>", unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    
+                    # Container para informações do cliente
+                    st.markdown("<div class='section-container'>", unsafe_allow_html=True)
+                    st.markdown("<div class='section-title'>Dados do Cliente</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-weight:bold;'>{pedido['nome']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.9em;'>CPF: {pedido.get('cpf', 'Não informado')}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:0.9em;'>☎ {pedido['telefone']}</div>", unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    
+                    # Container para produtos
+                    st.markdown("<div class='section-container'>", unsafe_allow_html=True)
+                    st.markdown("<div class='section-title'>Produtos</div>", unsafe_allow_html=True)
+                    if 'line_items' in pedido and pedido['line_items']:
+                        for item in pedido['line_items']:
+                            nome_item = item['name']
+                            variant_info = f" - {item['variant_title']}" if 'variant_title' in item and item['variant_title'] else ""
+                            quantidade = item['quantity'] if 'quantity' in item else 1
+                            st.markdown(f"<div class='pedido-produto'>📦 {nome_item}{variant_info} × {quantidade}</div>", unsafe_allow_html=True)
+                    else:
+                        # Fallback para compatibilidade com pedidos antigos
+                        st.markdown(f"<div class='pedido-produto'>📦 {pedido['produto']}</div>", unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+                
+                # COLUNA DIREITA - Palavra-chave e gerenciamento
+                with col_keyword:
+                    # Container para palavra-chave
+                    st.markdown("<div class='section-container'>", unsafe_allow_html=True)
+                    st.markdown("<div class='section-title'>Informações de Palavra-chave</div>", unsafe_allow_html=True)
+                    
+                    # Radio para selecionar se palavra-chave foi enviada
+                    palavra_chave_enviada = st.radio(
+                        "Palavra-chave enviada ao cliente?",
+                        ["Não", "Sim"],
+                        index=0 if not pedido.get("palavra_chave_enviada", False) else 1,
+                        key=f"palavra_chave_{pedido['id']}",
+                        horizontal=True,
+                    )
+                    
+                    # Campo de texto para inserir a palavra-chave (condicional)
+                    palavra_chave = ""
+                    palavra_chave_alterada = False
+                    
+                    if palavra_chave_enviada == "Sim":
+                        # Armazena o valor anterior da palavra-chave
+                        palavra_chave_anterior = pedido.get("palavra_chave", "")
+                        
+                        # Campo para digitar a palavra-chave
+                        palavra_chave = st.text_input(
+                            "Qual a palavra-chave?", 
+                            value=palavra_chave_anterior,
+                            placeholder="Digite a palavra-chave enviada",
+                            key=f"palavra_chave_texto_{pedido['id']}"
+                        )
+                        
+                        # Verifica se houve alteração
+                        palavra_chave_alterada = (palavra_chave_anterior != palavra_chave)
+                        
+                        # Status da palavra-chave alterada
+                        if palavra_chave_alterada:
+                            st.info("Palavra-chave alterada. Clique em Salvar para confirmar.", icon="⚠️")
+                        
+                        # Botão para salvar alterações
+                        novo_status_palavra = (palavra_chave_enviada == "Sim")
+                        status_alterado = pedido.get("palavra_chave_enviada", False) != novo_status_palavra
+                        
+                        # Mostrar botão apenas se houver alterações
+                        if palavra_chave_alterada or status_alterado:
+                            if st.button("💾 Salvar Palavra-chave", key=f"save_keyword_{pedido['id']}", type="primary"):
+                                # Salvar alterações
+                                pedido["palavra_chave_enviada"] = novo_status_palavra
+                                pedido["palavra_chave"] = palavra_chave
+                                utils.salvar_pedidos(st.session_state.pedidos, 'data/pedidos_pendentes.json')
+                                st.success("Palavra-chave salva com sucesso!", icon="✅")
+                                st.experimental_rerun()  # Recarrega a página para atualizar o estado
+                    else:
+                        # Se mudar de Sim para Não
+                        novo_status_palavra = False
+                        if pedido.get("palavra_chave_enviada", False) != novo_status_palavra:
+                            if st.button("💾 Salvar Alteração", key=f"save_status_{pedido['id']}", type="primary"):
+                                pedido["palavra_chave_enviada"] = novo_status_palavra
+                                utils.salvar_pedidos(st.session_state.pedidos, 'data/pedidos_pendentes.json')
+                                st.success("Status atualizado!", icon="✅")
+                                st.experimental_rerun()  # Recarrega a página para atualizar o estado
+                    
+                    st.markdown("</div>", unsafe_allow_html=True)
 
                 # Buscar URL da Shopee correspondente ao produto
                 if 'url_shopee' not in pedido or not pedido['url_shopee']:
@@ -978,7 +1111,17 @@ with tab_processados:
 
             # Informações do cliente e produto com estilo melhorado
             st.markdown(f"<div class='pedido-cliente'>{pedido['nome']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='pedido-produto'>📦 {pedido['produto']}</div>", unsafe_allow_html=True)
+            
+            # Exibir todos os itens do pedido processado
+            if 'line_items' in pedido and pedido['line_items']:
+                for item in pedido['line_items']:
+                    nome_item = item['name']
+                    variant_info = f" - {item['variant_title']}" if 'variant_title' in item and item['variant_title'] else ""
+                    quantidade = item['quantity'] if 'quantity' in item else 1
+                    st.markdown(f"<div class='pedido-produto'>📦 {nome_item}{variant_info} × {quantidade}</div>", unsafe_allow_html=True)
+            else:
+                # Fallback para compatibilidade com pedidos antigos
+                st.markdown(f"<div class='pedido-produto'>📦 {pedido['produto']}</div>", unsafe_allow_html=True)
 
             # Layout horizontal para mostrar rastreio e transportadora
             if 'codigo_rastreamento' in pedido or 'transportadora' in pedido:
@@ -1047,7 +1190,17 @@ with tab_ignorados:
 
             # Informações do cliente e produto com estilo melhorado
             st.markdown(f"<div class='pedido-cliente'>{pedido['nome']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='pedido-produto'>📦 {pedido['produto']}</div>", unsafe_allow_html=True)
+            
+            # Exibir todos os itens do pedido ignorado
+            if 'line_items' in pedido and pedido['line_items']:
+                for item in pedido['line_items']:
+                    nome_item = item['name']
+                    variant_info = f" - {item['variant_title']}" if 'variant_title' in item and item['variant_title'] else ""
+                    quantidade = item['quantity'] if 'quantity' in item else 1
+                    st.markdown(f"<div class='pedido-produto'>📦 {nome_item}{variant_info} × {quantidade}</div>", unsafe_allow_html=True)
+            else:
+                # Fallback para compatibilidade com pedidos antigos
+                st.markdown(f"<div class='pedido-produto'>📦 {pedido['produto']}</div>", unsafe_allow_html=True)
 
             # Endereço em formato compacto
             if 'endereco' in pedido and isinstance(pedido['endereco'], dict):

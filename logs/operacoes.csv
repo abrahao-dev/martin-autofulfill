@@ -281,3 +281,5 @@ data_hora,pedido_id,pedido_numero,cliente,operacao,resultado,detalhes
 2025-06-04 10:17:59,6698837541179,#2696,Adriana paulino de souza,mover_para_pendentes,sucesso,Pedido com erro de fulfillment movido de volta para pendentes
 2025-06-04 10:53:37,6698837541179,#2696,Adriana paulino de souza,processar,sucesso,"Código: AJ250603113447901, Transportadora: Anjun Express"
 2025-06-04 13:05:28,6698837541179,#2696,Adriana paulino de souza,mover_para_pendentes,sucesso,Pedido com erro de fulfillment movido de volta para pendentes
+2025-06-04 23:18:53,6699999756603,#2698,Bruno Carvalho,processar,sucesso,"Código: AJ250604113426601, Transportadora: Anjun Express"
+2025-06-04 23:20:48,6699999756603,#2698,Bruno Carvalho,mover_para_pendentes,sucesso,Pedido com erro de fulfillment movido de volta para pendentes
