@@ -576,7 +576,14 @@ col1, col2 = st.columns([3, 1])
 
 # Botão para atualizar/recarregar a interface (já temos o botão de buscar na sidebar)
 with col1:
-    if st.button("🔄 Atualizar Interface", use_container_width=True, help="Recarrega a interface sem buscar novos pedidos"):
+    if st.button("🔄 Atualizar Interface", use_container_width=True, key="btn_atualizar_interface", help="Recarrega a interface sem buscar novos pedidos"):
+        # Usar session_state para controlar e evitar loops infinitos
+        if "ultima_atualizacao" not in st.session_state:
+            st.session_state.ultima_atualizacao = 0
+        
+        # Incrementar contador de atualização
+        st.session_state.ultima_atualizacao += 1
+        st.toast("Interface atualizada", icon="✅")
         st.rerun()
 
 # Criar abas para navegar entre diferentes tipos de pedidos
@@ -881,8 +888,9 @@ with tab_pendentes:
                     st.markdown("<div class='section-container'>", unsafe_allow_html=True)
                     st.markdown("<div class='section-title'>Status do Pedido</div>", unsafe_allow_html=True)
                     comprado = st.radio(
-                        "",  # Removi o label pois já temos o título acima
+                        "Status da compra",  # Adicionei um label adequado
                         ["Já comprado", "Não comprado"],
+                        label_visibility="collapsed",  # Esconda o label mas mantenha-o para acessibilidade
                         index=0 if pedido.get("ja_comprado", False) else 1,
                         key=f"ja_comprado_{pedido['id']}",
                         horizontal=True,
@@ -928,7 +936,7 @@ with tab_pendentes:
                         ["Não", "Sim"],
                         index=0 if not pedido.get("palavra_chave_enviada", False) else 1,
                         key=f"palavra_chave_{pedido['id']}",
-                        horizontal=True,
+                        horizontal=True
                     )
                     
                     # Campo de texto para inserir a palavra-chave (condicional)

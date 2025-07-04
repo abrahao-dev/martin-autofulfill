@@ -152,7 +152,10 @@ def ignorar_pedido_completo(pedido):
         pedido_ignorado['data_ignorado'] = datetime.now().isoformat()
         
         # Gerenciar persistência dos pedidos
-        gerenciar_persistencia_pedidos(pedido_ignorado)
+        # Carregar os pedidos pendentes atuais
+        pedidos_pendentes = utils.carregar_pedidos("data/pedidos_pendentes.json")
+        # Chamar a função com os parâmetros corretos
+        gerenciar_persistencia_pedidos(pedido_ignorado['id'], pedidos_pendentes, pedido_ignorado=pedido_ignorado)
         
         # Registrar no log
         logger.registrar_operacao(
