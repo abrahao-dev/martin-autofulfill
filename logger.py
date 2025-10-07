@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Módulo de logging para o Martin Autofulfill
-Gerencia o registro de operações em arquivos de log
+Logging module for Martin Autofulfill
+Manages operation logging to CSV and text log files
 """
 
 import os
@@ -10,15 +10,15 @@ import csv
 from datetime import datetime
 import logging
 
-# Configurar diretórios
+# Configure directories
 LOG_DIR = "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# Configurar arquivo de log CSV
-CSV_LOG_FILE = os.path.join(LOG_DIR, "operacoes.csv")
+# Configure log file paths
+CSV_LOG_FILE = os.path.join(LOG_DIR, "operations.csv")
 LOG_FILE = os.path.join(LOG_DIR, "martin_autofulfill.log")
 
-# Configurar o logger padrão do Python
+# Configure Python's default logger
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -30,68 +30,68 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-def inicializar_csv_log():
-    """Inicializa o arquivo CSV de log se não existir"""
+def initialize_csv_log():
+    """Initialize the CSV log file if it doesn't exist"""
     if not os.path.exists(CSV_LOG_FILE):
         with open(CSV_LOG_FILE, 'w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow([
-                'data_hora', 
-                'pedido_id', 
-                'pedido_numero', 
-                'cliente', 
-                'operacao', 
-                'resultado', 
-                'detalhes'
+                'datetime',
+                'order_id',
+                'order_number',
+                'customer',
+                'operation',
+                'result',
+                'details'
             ])
 
-def registrar_operacao(pedido_id, pedido_numero, cliente, operacao, resultado, detalhes=""):
+def log_operation(order_id, order_number, customer, operation, result, details=""):
     """
-    Registra uma operação no log CSV
-    
+    Log an operation to the CSV log file
+
     Args:
-        pedido_id (int/str): ID do pedido
-        pedido_numero (str): Número formatado do pedido (ex: #1001)
-        cliente (str): Nome do cliente
-        operacao (str): Tipo de operação (ex: processamento, ignorar)
-        resultado (str): Resultado da operação (sucesso ou erro)
-        detalhes (str): Detalhes adicionais da operação
+        order_id (int/str): Order ID
+        order_number (str): Formatted order number (e.g., #1001)
+        customer (str): Customer name
+        operation (str): Operation type (e.g., process, ignore)
+        result (str): Operation result (success or error)
+        details (str): Additional operation details
     """
-    # Garantir que o arquivo existe
-    inicializar_csv_log()
-    
-    # Data e hora atual
-    data_hora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    # Registrar no CSV
+    # Ensure the file exists
+    initialize_csv_log()
+
+    # Current date and time
+    datetime_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Write to CSV
     with open(CSV_LOG_FILE, 'a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerow([
-            data_hora,
-            pedido_id,
-            pedido_numero,
-            cliente,
-            operacao,
-            resultado,
-            detalhes
+            datetime_str,
+            order_id,
+            order_number,
+            customer,
+            operation,
+            result,
+            details
         ])
-    
-    # Registrar também no log do sistema
-    status = "✅" if resultado == "sucesso" else "❌"
-    logger.info(f"{status} {operacao.upper()} - Pedido {pedido_numero} - Cliente: {cliente} - {resultado}")
-    if detalhes:
-        logger.info(f"    Detalhes: {detalhes}")
 
-def registrar_erro(mensagem, pedido_id=None, pedido_numero=None):
+    # Also log to system log
+    status = "✅" if result == "success" else "❌"
+    logger.info(f"{status} {operation.upper()} - Order {order_number} - Customer: {customer} - {result}")
+    if details:
+        logger.info(f"    Details: {details}")
+
+def log_error(message, order_id=None, order_number=None):
     """
-    Registra um erro no log
-    
+    Log an error message
+
     Args:
-        mensagem (str): Mensagem de erro
-        pedido_id (int/str): ID do pedido, se aplicável
-        pedido_numero (str): Número do pedido, se aplicável
+        message (str): Error message
+        order_id (int/str): Order ID, if applicable
+        order_number (str): Order number, if applicable
     """
-    if pedido_id and pedido_numero:
-        logger.error(f"ERRO - Pedido {pedido_numero} (ID: {pedido_id}): {mensagem}")
+    if order_id and order_number:
+        logger.error(f"ERROR - Order {order_number} (ID: {order_id}): {message}")
     else:
-        logger.error(f"ERRO: {mensagem}")
+        logger.error(f"ERROR: {message}")
